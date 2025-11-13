@@ -1,4 +1,4 @@
-# Greet 'n - Greeting Card Creator
+# GifCard - Greeting Card Creator
 
 A modern web application for creating personalized greeting cards with GIF integration.
 
@@ -30,7 +30,7 @@ A modern web application for creating personalized greeting cards with GIF integ
 
 ```bash
 git clone <repository-url>
-cd partiful
+cd GifCard
 ```
 
 2. Install dependencies:
@@ -53,7 +53,7 @@ VITE_TENOR_API_KEY=your_tenor_api_key
 npm run dev
 ```
 
-5. Open [http://localhost:8080](http://localhost:8080) in your browser.
+5. Open [http://localhost:8080] in your browser.
 
 ## Available Scripts
 
