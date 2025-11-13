@@ -43,8 +43,8 @@ npm install
    Create a `.env` file in the root directory with your API keys:
 
 ```env
-GIPHY_API_KEY=your_giphy_api_key
-TENOR_API_KEY=your_tenor_api_key
+VITE_GIPHY_API_KEY=your_giphy_api_key
+VITE_TENOR_API_KEY=your_tenor_api_key
 ```
 
 4. Start the development server:
