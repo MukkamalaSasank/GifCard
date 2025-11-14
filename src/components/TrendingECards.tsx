@@ -25,7 +25,12 @@ const TrendingECards = () => {
   useEffect(() => {
     const fetchGifs = async () => {
       try {
-        const apiKey = "YOUR_GIPHY_API_KEY"; // replace with your GIPHY key
+        const apiKey = import.meta.env.VITE_GIPHY_API_KEY;
+        if (!apiKey) {
+          console.error("GIPHY API key not found in environment variables");
+          setLoading(false);
+          return;
+        }
         const promises = trendingECards.map(async (card) => {
           const response = await fetch(
             `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(
