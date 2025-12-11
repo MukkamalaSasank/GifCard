@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -8,10 +9,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Palette, Type, Sparkles, ArrowRight, Search } from "lucide-react";
+import SignaturePad from "@/components/SignaturePad";
+import {
+  Search,
+  Eye,
+  Send,
+  Sparkles,
+  Palette,
+  Type,
+  MessageSquare,
+  Copy,
+  Signature,
+  Users,
+} from "lucide-react";
 import axios from "axios";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { toast } from "sonner";
 
 interface GifData {
   id: string;
@@ -19,19 +33,99 @@ interface GifData {
   title: string;
 }
 
-const CreateGreetingCard = () => {
+interface GiphyGif {
+  id: string;
+  title: string;
+  images: {
+    fixed_height: {
+      url: string;
+    };
+  };
+}
+
+interface TenorGif {
+  id: string;
+  content_description: string;
+  title: string;
+  media_formats: {
+    gif: {
+      url: string;
+    };
+  };
+}
+
+const quickMessages = [
+  "Happy Birthday!",
+  "Thinking of you!",
+  "You're the best!",
+  "Congrats!",
+];
+
+export default function CreateGreetingCard() {
+  const [recipient, setRecipient] = useState("");
+  const [message, setMessage] = useState("");
+  const [sender, setSender] = useState("");
   const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
+  const [signature, setSignature] = useState<string | null>(null);
   const [gifQuery, setGifQuery] = useState("");
   const [gifs, setGifs] = useState<GifData[]>([]);
-  const [selectedGif, setSelectedGif] = useState<string | null>(null);
+  const [trendingGifs, setTrendingGifs] = useState<GifData[]>([]);
+  const [selectedGif, setSelectedGif] = useState<string | null>(
+    "https://media.tenor.com/3bTxZ4Hd-3IAAAAd/cat-wave.gif"
+  );
   const [loading, setLoading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isGifModalOpen, setIsGifModalOpen] = useState(false);
+  const [isSignaturePadOpen, setIsSignaturePadOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const fetchTrendingGifs = async () => {
+    setLoading(true);
+    try {
+      const giphyApiKey = import.meta.env.VITE_GIPHY_API_KEY;
+      const tenorApiKey = import.meta.env.VITE_TENOR_API_KEY;
+      let allGifs: GifData[] = [];
+
+      if (giphyApiKey) {
+        const res = await axios.get(
+          `https://api.giphy.com/v1/gifs/trending?api_key=${giphyApiKey}&limit=10`
+        );
+        allGifs = [
+          ...allGifs,
+          ...res.data.data.map((gif: GiphyGif) => ({
+            id: gif.id,
+            url: gif.images.fixed_height.url,
+            title: gif.title,
+          })),
+        ];
+      }
+
+      if (tenorApiKey && allGifs.length < 20) {
+        const res = await axios.get(
+          `https://tenor.googleapis.com/v2/featured?key=${tenorApiKey}&limit=${
+            20 - allGifs.length
+          }&contentfilter=medium`
+        );
+        allGifs = [
+          ...allGifs,
+          ...res.data.results.map((gif: TenorGif) => ({
+            id: gif.id,
+            url: gif.media_formats.gif.url,
+            title: gif.content_description || gif.title,
+          })),
+        ];
+      }
+
+      setTrendingGifs(allGifs);
+    } catch (err) {
+      console.error("Error fetching trending GIFs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const searchGifs = async (query: string) => {
     if (!query.trim()) return;
     setLoading(true);
-
     try {
       const giphyApiKey = import.meta.env.VITE_GIPHY_API_KEY;
       const tenorApiKey = import.meta.env.VITE_TENOR_API_KEY;
@@ -41,11 +135,11 @@ const CreateGreetingCard = () => {
         const res = await axios.get(
           `https://api.giphy.com/v1/gifs/search?api_key=${giphyApiKey}&q=${encodeURIComponent(
             query
-          )}&limit=8`
+          )}&limit=10`
         );
         allGifs = [
           ...allGifs,
-          ...res.data.data.map((gif: any) => ({
+          ...res.data.data.map((gif: GiphyGif) => ({
             id: gif.id,
             url: gif.images.fixed_height.url,
             title: gif.title,
@@ -53,17 +147,17 @@ const CreateGreetingCard = () => {
         ];
       }
 
-      if (tenorApiKey && allGifs.length < 8) {
+      if (tenorApiKey && allGifs.length < 20) {
         const res = await axios.get(
           `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(
             query
           )}&key=${tenorApiKey}&limit=${
-            8 - allGifs.length
+            20 - allGifs.length
           }&contentfilter=medium`
         );
         allGifs = [
           ...allGifs,
-          ...res.data.results.map((gif: any) => ({
+          ...res.data.results.map((gif: TenorGif) => ({
             id: gif.id,
             url: gif.media_formats.gif.url,
             title: gif.content_description || gif.title,
@@ -80,169 +174,349 @@ const CreateGreetingCard = () => {
   };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (gifQuery) searchGifs(gifQuery);
+    if (isGifModalOpen) {
+      fetchTrendingGifs();
+    }
+  }, [isGifModalOpen]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (gifQuery) {
+        searchGifs(gifQuery);
+      } else {
+        // if query is cleared, show trending again
+        setGifs([]);
+      }
     }, 500);
-    return () => clearTimeout(timeoutId);
+    return () => clearTimeout(handler);
   }, [gifQuery]);
+
+  const handleSend = () => {
+    setIsPreviewOpen(true);
+  };
+
+  const handleSaveSignature = (signatureDataUrl: string) => {
+    setSignature(signatureDataUrl);
+    setIsSignaturePadOpen(false);
+  };
+
+  const handleCloseSignaturePad = () => {
+    setIsSignaturePadOpen(false);
+  };
+
+  const handleCopy = () => {
+    const cardContent = `Title: ${title}
+
+Message: ${message}
+
+GIF: ${selectedGif}
+${signature ? `Signature: [Signature Image]` : ""}`;
+
+    navigator.clipboard.writeText(cardContent).then(
+      () => {
+        toast("Card content copied to clipboard!");
+      },
+      (err) => {
+        console.error("Could not copy text: ", err);
+        toast("Failed to copy card content.", {
+          description: "Please try again.",
+        });
+      }
+    );
+  };
 
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0f] via-[#111827] to-[#1e1b4b] relative overflow-hidden text-gray-100 flex items-center justify-center">
-        {/* Background accents */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-20 -right-32 h-96 w-96 bg-purple-500/20 blur-3xl rounded-full" />
-          <div className="absolute -bottom-20 -left-32 h-96 w-96 bg-blue-500/20 blur-3xl rounded-full" />
-        </div>
-
-        {/* Main Section */}
-        <main className="relative z-10 flex flex-col lg:flex-row items-center justify-center gap-14 w-full max-w-6xl px-6 -mt-40 mb-8">
-          {/* Card */}
-          <div className="relative w-80 sm:w-96 h-72 bg-[#18181b]/70 backdrop-blur-xl rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-gray-700 overflow-hidden transition-all hover:shadow-[0_0_60px_rgba(88,28,135,0.3)] p-4">
-            {/* Glow */}
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 blur-xl -z-10" />
-
-            {/* GIF Display */}
-            <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-              <img
-                src={
-                  selectedGif ||
-                  "https://media.tenor.com/3bTxZ4Hd-3IAAAAd/cat-wave.gif"
-                }
-                alt="Selected GIF"
-                className="w-full h-full object-cover rounded-2xl"
-              />
-            </div>
-
-            {/* Choose GIF Button */}
-            <Dialog
-              open={isDialogOpen}
-              onOpenChange={(open) => {
-                setIsDialogOpen(open);
-                setGifs([]);
-                setGifQuery("");
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute bottom-4 right-4 text-sm bg-gray-800/70 text-gray-100 hover:bg-gray-700 border border-gray-600"
-                >
-                  Choose GIF
-                </Button>
-              </DialogTrigger>
-
-              <DialogContent className="max-w-2xl bg-[#1f1f2e]/95 backdrop-blur-xl rounded-2xl border border-gray-700 text-gray-100">
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold text-gray-100">
-                    Choose a GIF
-                  </DialogTitle>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      value={gifQuery}
-                      onChange={(e) => setGifQuery(e.target.value)}
-                      placeholder="Search GIFs..."
-                      className="bg-[#2b2b3d] border-gray-600 text-gray-100 placeholder:text-gray-400"
-                    />
-                    <Button
-                      onClick={() => searchGifs(gifQuery)}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500"
-                    >
-                      <Search className="w-4 h-4 mr-1" /> Search
-                    </Button>
-                  </div>
-
-                  {loading && (
-                    <p className="text-center text-gray-400">Loading...</p>
-                  )}
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[400px] overflow-y-auto">
-                    {gifs.map((gif) => (
-                      <div
-                        key={gif.id}
-                        className={`cursor-pointer border-2 rounded-lg overflow-hidden transition-all hover:scale-105 ${
-                          selectedGif === gif.url
-                            ? "border-purple-500"
-                            : "border-gray-700"
-                        }`}
-                        onClick={() => {
-                          setSelectedGif(gif.url);
-                          setIsDialogOpen(false);
-                        }}
-                      >
-                        <img
-                          src={gif.url}
-                          alt={gif.title}
-                          className="w-full h-24 object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold tracking-tight">
+              Create your Greeting Card
+            </h1>
+            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
+              Personalize your message, choose a GIF, and send it to a friend!
+            </p>
           </div>
 
-          {/* Inputs + Controls */}
-          <div className="flex flex-col items-center lg:items-start gap-8 mt-2 lg:mt-0">
-            {/* Input Fields */}
-            <div className="space-y-6 w-full max-w-sm">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-start">
+            {/* Left Column: Preview */}
+            <div className="flex-1 min-w-0">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden sticky top-8">
+                <div className="aspect-[4/3] bg-gray-200 dark:bg-gray-700">
+                  {selectedGif && (
+                    <img
+                      src={selectedGif}
+                      alt="Selected GIF"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold mb-2 truncate">
+                    {title || "Card Title"}
+                  </h2>
+                  <h3 className="text-xl font-semibold truncate">
+                    {recipient || "To: Recipient"}
+                  </h3>
+                  <p className="mt-2 text-gray-700 dark:text-gray-300 h-24 overflow-y-auto">
+                    {message || "Your message will appear here..."}
+                  </p>
+                  {signature && (
+                    <div className="mt-4 flex justify-end">
+                      <img
+                        src={signature}
+                        alt="Signature"
+                        className="h-16"
+                        onClick={() => setIsSignaturePadOpen(true)}
+                      />
+                    </div>
+                  )}
+                  <div className="flex justify-end items-center mt-4">
+                    <span className="text-right">
+                      {sender || "From: Sender"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Editor */}
+            <div className="flex-1 min-w-0 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+              {/* GIF Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="text-lg font-semibold">Choose a GIF</label>
+                <Dialog open={isGifModalOpen} onOpenChange={setIsGifModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2 flex items-center justify-center"
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Browse GIFs
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle>Search for a GIF</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-1">
+                      <Input
+                        value={gifQuery}
+                        onChange={(e) => setGifQuery(e.target.value)}
+                        placeholder="Search for any GIF..."
+                        className="mb-4"
+                      />
+                      {loading ? (
+                        <div className="text-center p-8">Loading...</div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
+                          {(gifQuery ? gifs : trendingGifs).map((gif) => (
+                            <div
+                              key={gif.id}
+                              className="cursor-pointer rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500"
+                              onClick={() => {
+                                setSelectedGif(gif.url);
+                                setIsGifModalOpen(false);
+                              }}
+                            >
+                              <img
+                                src={gif.url}
+                                alt={gif.title}
+                                className="w-full h-32 object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label htmlFor="title" className="font-semibold">
                   Title
                 </label>
                 <Input
+                  id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter title"
-                  className="bg-[#2b2b3d] border-gray-600 text-gray-100 placeholder:text-gray-400"
+                  placeholder="Card Title (e.g., Happy Birthday!)"
+                  className="mt-1"
                 />
               </div>
+
+              {/* Message Area */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Note
+                <label
+                  htmlFor="message"
+                  className="text-lg font-semibold flex items-center"
+                >
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Write your message
+                </label>
+                <Textarea
+                  id="message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="What do you want to say?"
+                  className="mt-2 min-h-[120px]"
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {quickMessages.map((qm) => (
+                    <Button
+                      key={qm}
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setMessage(message ? `${message} ${qm}` : qm)
+                      }
+                    >
+                      {qm}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-yellow-100 border-yellow-300 hover:bg-yellow-200"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" /> AI Assist
+                  </Button>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setIsSignaturePadOpen(true)}
+                  >
+                    <Signature className="w-4 h-4 mr-2" /> Add Signature
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setIsPreviewOpen(true)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" /> Preview
+                  </Button>
+                </div>
+              </div>
+
+              {/* Recipient */}
+              <div>
+                <label htmlFor="recipient" className="font-semibold">
+                  To
                 </label>
                 <Input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Enter note"
-                  className="bg-[#2b2b3d] border-gray-600 text-gray-100 placeholder:text-gray-400"
+                  id="recipient"
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                  placeholder="Your friend's name"
+                  className="mt-1"
                 />
               </div>
-            </div>
 
-            {/* Icons */}
-            <div className="flex gap-4 justify-center lg:justify-start mt-2">
-              {[Palette, Type, Sparkles].map((Icon, i) => (
+              {/* Sender */}
+              <div>
+                <label htmlFor="sender" className="font-semibold">
+                  From
+                </label>
+                <Input
+                  id="sender"
+                  value={sender}
+                  onChange={(e) => setSender(e.target.value)}
+                  placeholder="Your name"
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
                 <Button
-                  key={i}
-                  variant="ghost"
-                  size="icon"
-                  className="w-12 h-12 rounded-full bg-[#2b2b3d] hover:bg-[#3b3b4d] text-gray-200 border border-gray-600"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleCopy}
                 >
-                  <Icon className="w-6 h-6" />
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Card
                 </Button>
-              ))}
-            </div>
-
-            {/* Next Button */}
-            <div className="mt-4">
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all">
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+                <Button variant="outline" className="w-full" onClick={() => {}}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Get Co-Signers
+                </Button>
+                <Button
+                  onClick={handleSend}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Greeting
+                </Button>
+              </div>
             </div>
           </div>
         </main>
       </div>
+
+      {isSignaturePadOpen && (
+        <SignaturePad
+          onSave={handleSaveSignature}
+          onClose={handleCloseSignaturePad}
+        />
+      )}
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Preview your Greeting Card</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
+              {selectedGif && (
+                <img
+                  src={selectedGif}
+                  alt="Selected GIF"
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <div className="mt-4">
+              <h2 className="text-2xl font-bold mb-2 truncate">
+                {title || "Card Title"}
+              </h2>
+              <h3 className="text-xl font-semibold">{recipient}</h3>
+              <p className="mt-2 text-gray-600">{message}</p>
+              {signature ? (
+                <img
+                  src={signature}
+                  alt="Signature"
+                  className="h-16 mt-4 ml-auto cursor-pointer"
+                  onClick={() => setIsSignaturePadOpen(true)}
+                />
+              ) : (
+                <p className="mt-4 text-right font-medium"></p>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  /* Implement actual send logic */
+                  setIsPreviewOpen(false);
+                }}
+              >
+                Confirm & Send
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Footer />
     </>
   );
-};
-
-export default CreateGreetingCard;
+}

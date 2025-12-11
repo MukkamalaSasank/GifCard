@@ -1,3 +1,4 @@
+import { Eye, Heart, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -6,16 +7,47 @@ interface ECard {
   id: number;
   title: string;
   category: string;
+  query: string;
   image?: string; // optional since it’s added later
 }
 
 const trendingECards: ECard[] = [
-  { id: 1, title: "Happy Birthday", category: "Birthday" },
-  { id: 2, title: "Congratulations", category: "Celebration" },
-  { id: 3, title: "Thank You", category: "Gratitude" },
-  { id: 4, title: "Get Well Soon", category: "Wellness" },
-  { id: 5, title: "Happy Anniversary", category: "Anniversary" },
-  { id: 6, title: "New Baby", category: "New Baby" },
+  {
+    id: 1,
+    title: "Happy Birthday",
+    category: "Birthday",
+    query: "birthday celebration",
+  },
+  {
+    id: 2,
+    title: "Congratulations",
+    category: "Celebration",
+    query: "congratulations success",
+  },
+  {
+    id: 3,
+    title: "Thank You",
+    category: "Gratitude",
+    query: "thank you grateful",
+  },
+  {
+    id: 4,
+    title: "Get Well Soon",
+    category: "Wellness",
+    query: "get well soon",
+  },
+  {
+    id: 5,
+    title: "Happy Anniversary",
+    category: "Anniversary",
+    query: "anniversary love",
+  },
+  {
+    id: 6,
+    title: "New Baby",
+    category: "New Baby",
+    query: "new baby congratulations",
+  },
 ];
 
 const TrendingECards = () => {
@@ -34,7 +66,7 @@ const TrendingECards = () => {
         const promises = trendingECards.map(async (card) => {
           const response = await fetch(
             `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(
-              card.category
+              card.query
             )}&limit=1&rating=g`
           );
           const data = await response.json();
@@ -86,7 +118,6 @@ const TrendingECards = () => {
                         src={card.image}
                         alt={card.title}
                         className="h-full w-full object-cover"
-                        loading="lazy"
                       />
                     ) : (
                       <div className="h-full w-full bg-gray-200 animate-pulse rounded-lg" />

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { Eye, Heart, Share2 } from "lucide-react";
 
 interface GifData {
   id: string;
@@ -22,6 +23,12 @@ const categories: CategoryData[] = [
   { name: "Holidays", query: "holiday cheer", gif: null },
   { name: "Thank You", query: "thank you grateful", gif: null },
   { name: "Congratulations", query: "congratulations success", gif: null },
+  { name: "Get Well Soon", query: "get well soon", gif: null },
+  { name: "New Baby", query: "new baby congratulations", gif: null },
+  { name: "Graduation", query: "graduation celebration", gif: null },
+  { name: "Valentine's Day", query: "valentine's day love", gif: null },
+  { name: "Mother's Day", query: "mother's day", gif: null },
+  { name: "Father's Day", query: "father's day", gif: null },
 ];
 
 const ECardGallery = () => {
@@ -121,19 +128,22 @@ const ECardGallery = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
-            E-Card Gallery
+            Community Favorites
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Explore our collection of animated greeting cards
+            See what cards are trending in the community
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {categoryGifs.map((category) => (
-            <Link key={category.name} to="/create-greeting-card">
-              <Card className="group hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
+            <Card
+              key={category.name}
+              className="group hover:shadow-lg transition-shadow overflow-hidden flex flex-col rounded-2xl"
+            >
+              <Link to="/create-greeting-card" className="flex-grow">
                 <CardContent className="p-0">
-                  <div className="relative bg-muted aspect-[5/3]">
+                  <div className="relative bg-muted aspect-[2/3]">
                     {category.gif ? (
                       <img
                         src={category.gif.url}
@@ -160,8 +170,24 @@ const ECardGallery = () => {
                     </p>
                   </div>
                 </CardContent>
-              </Card>
-            </Link>
+              </Link>
+              <div className="p-4 pt-0 mt-auto">
+                <div className="mt-4 flex w-full items-center justify-around text-xs text-muted-foreground">
+                  <button className="flex items-center gap-1 hover:text-primary transition-colors">
+                    <Heart size={16} />
+                    <span>1.2k</span>
+                  </button>
+                  <button className="flex items-center gap-1 hover:text-primary transition-colors">
+                    <Share2 size={16} />
+                    <span>2.3k</span>
+                  </button>
+                  <button className="flex items-center gap-1 hover:text-primary transition-colors">
+                    <Eye size={16} />
+                    <span>5.8k</span>
+                  </button>
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
       </div>

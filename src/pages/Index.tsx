@@ -1,8 +1,8 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
-import Press from "@/components/Press";
 import TrendingECards from "@/components/TrendingECards";
+import Explore from "@/components/Explore";
 import ECardGallery from "@/components/ECardGallery";
 import Footer from "@/components/Footer";
 
@@ -13,8 +13,8 @@ const Index = () => {
       <main>
         <Hero />
         <Features />
-        <Press />
         <TrendingECards />
+        <Explore />
         <ECardGallery />
       </main>
       <Footer />
