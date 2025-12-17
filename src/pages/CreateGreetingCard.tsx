@@ -204,25 +204,35 @@ export default function CreateGreetingCard() {
     setIsSignaturePadOpen(false);
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const cardContent = `Title: ${title}
-
 Message: ${message}
+GIF: ${selectedGif}`;
 
-GIF: ${selectedGif}
-${signature ? `Signature: [Signature Image]` : ""}`;
+    try {
+      if (signature) {
+        const fetchRes = await fetch(signature);
+        const imageBlob = await fetchRes.blob();
+        const textBlob = new Blob([cardContent], { type: "text/plain" });
 
-    navigator.clipboard.writeText(cardContent).then(
-      () => {
-        toast("Card content copied to clipboard!");
-      },
-      (err) => {
-        console.error("Could not copy text: ", err);
-        toast("Failed to copy card content.", {
-          description: "Please try again.",
+        const item = new ClipboardItem({
+          "image/png": imageBlob,
+          "text/plain": textBlob,
         });
+
+        await navigator.clipboard.write([item]);
+
+        toast("Card content and signature copied to clipboard!");
+      } else {
+        await navigator.clipboard.writeText(cardContent);
+        toast("Card content copied to clipboard!");
       }
-    );
+    } catch (err) {
+      console.error("Could not copy to clipboard: ", err);
+      toast("Failed to copy card content.", {
+        description: "Please try again.",
+      });
+    }
   };
 
   return (
